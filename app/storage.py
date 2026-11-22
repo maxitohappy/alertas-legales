@@ -100,6 +100,7 @@ class LocalStorage:
 class S3Storage:
     def __init__(self):
         import boto3
+        from botocore.config import Config
 
         s = get_settings()
         self.bucket = s.s3_bucket
@@ -109,6 +110,8 @@ class S3Storage:
             aws_access_key_id=s.s3_access_key,
             aws_secret_access_key=s.s3_secret_key,
             region_name=s.s3_region,
+            # Direcciones path-style: requeridas por Supabase Storage y compatibles con R2/S3
+            config=Config(s3={"addressing_style": "path"}, signature_version="s3v4"),
         )
 
     def put(self, name: str, blob: bytes) -> None:

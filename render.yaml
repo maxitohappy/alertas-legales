@@ -42,3 +42,5 @@ services:
         sync: false
       - key: S3_SECRET_KEY
         sync: false
+      - key: S3_REGION
+        sync: false
