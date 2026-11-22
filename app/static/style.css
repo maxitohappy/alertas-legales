@@ -17,8 +17,8 @@ main { max-width: 1100px; margin: 0 auto; padding: 16px; }
 h1 { font-size: 1.5rem; margin: 8px 0 12px; }
 h2 { font-size: 1.15rem; margin: 28px 0 8px; }
 a { color: var(--primary); }
-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); display: block; overflow-x: auto; }
-thead, tbody { display: table; width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); }
+@media (max-width: 760px) { table { display: block; overflow-x: auto; white-space: nowrap; } }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 th { font-size: .85rem; color: var(--muted); font-weight: 600; }
 tr.overdue td:first-child, tr.today td:first-child { border-left: 4px solid var(--danger); }
