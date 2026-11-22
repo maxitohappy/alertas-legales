@@ -79,11 +79,10 @@ Tests y análisis: `pytest`, `ruff check .`, `bandit -r app -c pyproject.toml`, 
    se aplican solas.
 4. **Administrador:** el plan gratuito de Render no tiene consola, así que se crea desde su PC
    apuntando a la base de datos de producción (PowerShell):
-   ```powershell
-   $env:DATABASE_URL = Read-Host "Cadena de conexión de Neon"
-   python -m scripts.create_admin admin@despacho.es "Nombre Apellido"
-   Remove-Item Env:DATABASE_URL
    ```
+   python -m scripts.create_admin admin@despacho.es "Nombre Apellido" --produccion
+   ```
+   El script pide la cadena de conexión de Neon de forma oculta (no queda en el historial).
 5. **Revisión diaria:** en GitHub → *Settings → Secrets and variables → Actions*, cree los secrets:
    `DATABASE_URL`, `SECRET_KEY`, `ENCRYPTION_KEY` (los **mismos** que en Render), `APP_BASE_URL`,
    `FIRM_NAME`, `FIRM_ALERT_EMAILS`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`; y la variable
