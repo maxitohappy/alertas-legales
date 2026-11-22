@@ -1,0 +1,7 @@
+El cliente {{ case.client.full_name }} ha subido documentación.
+
+Solicitud: {{ req.description }}
+Caso: {{ case.reference }} — {{ case.title }}
+Archivos: {{ filenames|join(", ") }}
+
+Revíselos en: {{ base_url }}/casos/{{ case.id }}

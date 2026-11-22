@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if client else 'Nuevo' }} cliente{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>{{ 'Editar' if client else 'Nuevo' }} cliente</h1>
+  <form method="post" action="/clientes/guardar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {% if client %}<input type="hidden" name="client_id" value="{{ client.id }}">{% endif %}
+    <label>Nombre completo <input name="full_name" required maxlength="200" value="{{ client.full_name if client else '' }}"></label>
+    <label>Correo electrónico <input type="email" name="email" required maxlength="254" value="{{ client.email if client else '' }}"></label>
+    <label>Teléfono <input name="phone" maxlength="50" value="{{ client.phone if client else '' }}"></label>
+    <label>Fecha de consentimiento RGPD <input type="date" name="gdpr_consent_at" value="{{ client.gdpr_consent_at.isoformat() if client and client.gdpr_consent_at else '' }}"></label>
+    <label>Notas <textarea name="notes" maxlength="5000">{{ client.notes if client else '' }}</textarea></label>
+    <button>Guardar</button>
+  </form>
+</section>
+{% endblock %}

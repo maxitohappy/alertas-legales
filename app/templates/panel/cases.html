@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Casos{% endblock %}
+{% block content %}
+<div class="row"><h1>Casos</h1><a class="button" href="/casos/nuevo">Nuevo caso</a></div>
+<table>
+  <thead><tr><th>Nº procedimiento</th><th>Asunto</th><th>Cliente</th><th>Responsable</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for c in cases %}
+    <tr>
+      <td><a href="/casos/{{ c.id }}">{{ c.reference }}</a></td>
+      <td>{{ c.title }}</td>
+      <td>{{ c.client.full_name }}</td>
+      <td>{{ c.responsible.full_name if c.responsible else '—' }}</td>
+      <td>{{ c.status }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Aún no hay casos.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

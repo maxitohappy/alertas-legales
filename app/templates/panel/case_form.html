@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if case else 'Nuevo' }} caso{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>{{ 'Editar' if case else 'Nuevo' }} caso</h1>
+  {% if not clients %}<div class="flash error">Primero debe <a href="/clientes/nuevo">crear un cliente</a>.</div>{% endif %}
+  <form method="post" action="/casos/guardar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {% if case %}<input type="hidden" name="case_id" value="{{ case.id }}">{% endif %}
+    <label>Nº de procedimiento <input name="reference" required maxlength="100" value="{{ case.reference if case else '' }}"></label>
+    <label>Asunto <input name="title" required maxlength="200" value="{{ case.title if case else '' }}"></label>
+    <label>Juzgado / Tribunal <input name="court" maxlength="200" value="{{ case.court if case else '' }}"></label>
+    <label>Materia <input name="matter" maxlength="100" value="{{ case.matter if case else '' }}"></label>
+    <label>Cliente
+      <select name="client_id" required>
+        {% for c in clients %}<option value="{{ c.id }}" {% if case and case.client_id == c.id %}selected{% endif %}>{{ c.full_name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Abogado responsable (recibe las alertas)
+      <select name="responsible">
+        <option value="">— Sin asignar —</option>
+        {% for u in lawyers %}<option value="{{ u.id }}" {% if (case and case.responsible_id == u.id) or (not case and u.id == user.id) %}selected{% endif %}>{{ u.full_name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Estado
+      <select name="status">
+        <option value="abierto" {% if not case or case.status == 'abierto' %}selected{% endif %}>Abierto</option>
+        <option value="cerrado" {% if case and case.status == 'cerrado' %}selected{% endif %}>Cerrado</option>
+      </select>
+    </label>
+    <button>Guardar</button>
+  </form>
+</section>
+{% endblock %}

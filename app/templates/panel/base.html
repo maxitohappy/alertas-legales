@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Alertas Legales{% endblock %} · {{ firm_name() }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">{{ firm_name() }}</div>
+  {% if user %}
+  <nav>
+    <a href="/">Inicio</a>
+    <a href="/casos">Casos</a>
+    <a href="/clientes">Clientes</a>
+    {% if user.is_admin %}<a href="/usuarios">Usuarios</a>{% endif %}
+    <form method="post" action="/logout" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="link">Salir ({{ user.full_name }})</button>
+    </form>
+  </nav>
+  {% endif %}
+</header>
+<main>
+  {% for kind, msg in pop_flashes(request) %}
+  <div class="flash {{ kind }}">{{ msg }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

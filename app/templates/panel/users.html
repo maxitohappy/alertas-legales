@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<h1>Usuarios del despacho</h1>
+<table>
+  <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>2FA</th><th>Activo</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.full_name }}</td><td>{{ u.email }}</td><td>{{ u.role }}</td>
+      <td>{{ 'Sí' if u.totp_enabled else 'Pendiente' }}</td><td>{{ 'Sí' if u.is_active else 'No' }}</td>
+      <td class="actions">
+        <form method="post" action="/usuarios/{{ u.id }}/estado" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><button class="link">{{ 'Desactivar' if u.is_active else 'Activar' }}</button>
+        </form>
+        <form method="post" action="/usuarios/{{ u.id }}/reset-2fa" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><button class="link">Reiniciar 2FA</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<details class="card">
+  <summary>Nuevo usuario</summary>
+  <form method="post" action="/usuarios" class="grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Nombre <input name="full_name" required maxlength="200"></label>
+    <label>Correo <input type="email" name="email" required maxlength="254"></label>
+    <label>Contraseña inicial (mín. 12, mayúsculas, minúsculas y números) <input type="password" name="password" required minlength="12" autocomplete="new-password"></label>
+    <label>Rol <select name="role"><option value="abogado">Abogado</option><option value="admin">Administrador</option></select></label>
+    <button>Crear</button>
+  </form>
+</details>
+{% endblock %}

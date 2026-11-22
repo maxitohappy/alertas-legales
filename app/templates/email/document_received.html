@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="es"><body style="font-family:Arial,sans-serif;color:#1f2933;">
+<p>El cliente <strong>{{ case.client.full_name }}</strong> ha subido documentación.</p>
+<ul>
+  <li><strong>Solicitud:</strong> {{ req.description }}</li>
+  <li><strong>Caso:</strong> {{ case.reference }} — {{ case.title }}</li>
+  <li><strong>Archivos:</strong> {{ filenames|join(", ") }}</li>
+</ul>
+<p><a href="{{ base_url }}/casos/{{ case.id }}">Ver el caso en el panel</a></p>
+</body></html>

@@ -1,0 +1,16 @@
+Estimado/a {{ client_name }}:
+
+{% if reminder %}Le recordamos que aún no hemos recibido la siguiente documentación{% else %}Para continuar con su asunto, {{ firm_name }} necesita que nos aporte la siguiente documentación{% endif %}:
+
+  {{ description }}
+{% if due_date %}
+Fecha límite: {{ due_date|fecha }}
+{% endif %}
+
+Puede subirla de forma segura en este enlace personal (válido hasta el {{ expires|fecha }}):
+{{ link }}
+
+Por su seguridad: nunca le pediremos contraseñas, códigos ni datos bancarios por correo. Si tiene dudas sobre este mensaje, llame directamente al despacho.
+
+Atentamente,
+{{ firm_name }}

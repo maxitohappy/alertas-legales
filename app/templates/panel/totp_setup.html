@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Configurar 2FA{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Configure la verificación en dos pasos</h1>
+  <p>Es obligatoria para acceder al sistema. Escanee el código con Google Authenticator, Microsoft Authenticator o similar.</p>
+  <img src="{{ qr }}" alt="Código QR para la aplicación de autenticación" class="qr">
+  <p class="muted">¿No puede escanear? Introduzca esta clave manualmente: <code>{{ secret }}</code></p>
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <form method="post" action="/2fa/configurar">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Código de 6 dígitos <input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" autocomplete="one-time-code" required></label>
+    <button>Activar y entrar</button>
+  </form>
+</section>
+{% endblock %}

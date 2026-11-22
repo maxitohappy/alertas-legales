@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es"><body style="font-family:Arial,sans-serif;color:#1f2933;">
+<h2 style="margin:0 0 4px;">{{ firm_name }}</h2>
+<p style="margin:0 0 16px;color:#52606d;">Acciones pendientes al {{ today|fecha }}</p>
+<table cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:720px;">
+  <tr style="background:#f0f4f8;text-align:left;">
+    <th>Estado</th><th>Acción</th><th>Caso / Cliente</th><th>Fecha límite</th>
+  </tr>
+  {% for i in items %}
+  <tr style="border-top:1px solid #d9e2ec;">
+    <td style="font-weight:bold;color:{{ '#b42318' if i.kind in ('vencido','vence_hoy') else '#b54708' if i.kind == 'doc_vencido' else '#175cd3' }};">{{ i.label }}</td>
+    <td>{{ i.action }}</td>
+    <td><a href="{{ base_url }}/casos/{{ i.case.id }}">{{ i.case.reference }}</a><br>{{ i.case.client.full_name }}</td>
+    <td>{{ i.due_date|fecha }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p style="color:#7b8794;font-size:12px;margin-top:24px;">Correo generado automáticamente por el sistema de alertas. No responda a este mensaje.</p>
+</body></html>

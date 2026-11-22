@@ -1,0 +1,11 @@
+{{ firm_name }} — Acciones pendientes al {{ today|fecha }}
+
+{% for i in items %}
+[{{ i.label }}] {{ i.action }}
+  Caso: {{ i.case.reference }} — {{ i.case.title }}
+  Cliente: {{ i.case.client.full_name }}
+  Fecha límite: {{ i.due_date|fecha }}
+  Ver: {{ base_url }}/casos/{{ i.case.id }}
+
+{% endfor %}
+Este correo lo genera automáticamente el sistema de alertas. No responda a este mensaje.

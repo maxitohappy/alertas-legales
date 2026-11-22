@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Envío de documentación{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Envío seguro de documentación</h1>
+  <p>El despacho necesita que aporte:</p>
+  <p class="highlight">{{ req.description }}</p>
+  {% if req.due_date %}<p>Fecha límite: <strong>{{ req.due_date|fecha }}</strong></p>{% endif %}
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Archivos (PDF, JPG, PNG o DOCX; máx. {{ max_mb }} MB cada uno, hasta {{ max_files }})
+      <input type="file" name="files" multiple required accept=".pdf,.jpg,.jpeg,.png,.docx">
+    </label>
+    <button>Enviar documentación</button>
+  </form>
+  <p class="muted">La conexión está cifrada y los archivos se almacenan cifrados. Este enlace es personal: no lo reenvíe.</p>
+</section>
+{% endblock %}

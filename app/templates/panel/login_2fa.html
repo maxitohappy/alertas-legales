@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Verificación en dos pasos{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Verificación en dos pasos</h1>
+  <p>Introduzca el código de 6 dígitos de su aplicación de autenticación.</p>
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <form method="post" action="/login/2fa">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Código <input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" autocomplete="one-time-code" required autofocus></label>
+    <button>Verificar</button>
+  </form>
+</section>
+{% endblock %}

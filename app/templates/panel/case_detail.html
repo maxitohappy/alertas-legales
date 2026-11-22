@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ case.reference }}{% endblock %}
+{% block content %}
+<div class="row">
+  <h1>{{ case.reference }} — {{ case.title }}</h1>
+  <a class="button secondary" href="/casos/{{ case.id }}/editar">Editar caso</a>
+</div>
+<p class="muted">Cliente: <strong>{{ case.client.full_name }}</strong> ({{ case.client.email }}) · Juzgado: {{ case.court or '—' }} · Materia: {{ case.matter or '—' }} · Responsable: {{ case.responsible.full_name if case.responsible else '—' }} · Estado: {{ case.status }}</p>
+
+<h2>Plazos y acciones</h2>
+<table>
+  <thead><tr><th>Fecha límite</th><th>Acción</th><th>Avisar (días antes)</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+  {% for d in case.deadlines %}
+    <tr class="{{ 'done' if d.status == 'completado' else '' }}">
+      <td>{{ d.due_date|fecha }}{% if warnings.get(d.id) %}<br><small class="warn">⚠ {{ warnings[d.id] }}</small>{% endif %}</td>
+      <td>{{ d.title }}{% if d.notes %}<br><small class="muted">{{ d.notes }}</small>{% endif %}</td>
+      <td>{{ d.alert_days }}</td>
+      <td>{{ d.status }}</td>
+      <td class="actions">
+        {% if d.status == 'pendiente' %}
+        <form method="post" action="/plazos/{{ d.id }}/completar" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><button class="link">Completar</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/plazos/{{ d.id }}/eliminar" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><button class="link danger">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="5">Sin plazos registrados.</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<details class="card" open>
+  <summary>Nuevo plazo</summary>
+  <form method="post" action="/casos/{{ case.id }}/plazos" class="grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Acción <input name="title" required maxlength="200" placeholder="Presentar recurso de apelación"></label>
+    <label>Fecha límite <input type="date" name="due_date" required></label>
+    <label>Avisar con (días antes, separados por coma) <input name="alert_days" value="1" required maxlength="50" pattern="[0-9 ,]+" placeholder="7,3,1"></label>
+    <label>Notas <input name="notes" maxlength="5000"></label>
+    <button>Agregar plazo</button>
+  </form>
+</details>
+
+<h2>Documentos solicitados al cliente</h2>
+<table>
+  <thead><tr><th>Documento</th><th>Fecha límite</th><th>Recordar cada</th><th>Estado</th><th>Archivos</th><th></th></tr></thead>
+  <tbody>
+  {% for r in case.document_requests %}
+    <tr>
+      <td>{{ r.description }}</td>
+      <td>{{ r.due_date|fecha }}</td>
+      <td>{{ r.reminder_every_days }} día(s)</td>
+      <td>{{ r.status }}{% if r.sent_count %}<br><small class="muted">{{ r.sent_count }} envío(s), último {{ r.last_sent_at|fecha }}</small>{% endif %}</td>
+      <td>{% for doc in r.documents %}<a href="/documentos/{{ doc.id }}/descargar">{{ doc.original_name }}</a> <small class="muted">({{ (doc.size / 1024)|round(1) }} KB)</small><br>{% else %}—{% endfor %}</td>
+      <td class="actions">
+        {% if r.status == 'pendiente' %}
+        <form method="post" action="/solicitudes/{{ r.id }}/enviar" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><button class="link">Enviar ahora</button>
+        </form>
+        <form method="post" action="/solicitudes/{{ r.id }}/estado" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><input type="hidden" name="status" value="recibido"><button class="link">Marcar recibido</button>
+        </form>
+        <form method="post" action="/solicitudes/{{ r.id }}/estado" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><input type="hidden" name="status" value="cancelado"><button class="link danger">Cancelar</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="6">No se han solicitado documentos.</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<details class="card" open>
+  <summary>Solicitar documento al cliente</summary>
+  <form method="post" action="/casos/{{ case.id }}/solicitudes" class="grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <label>Documento requerido <input name="description" required maxlength="500" placeholder="Copia del DNI por ambas caras"></label>
+    <label>Fecha límite <input type="date" name="due_date"></label>
+    <label>Recordar cada (días) <input type="number" name="reminder_every_days" value="3" min="1" max="30"></label>
+    <label class="check"><input type="checkbox" name="send_now" value="true" checked> Enviar ya el correo al cliente</label>
+    <button>Solicitar</button>
+  </form>
+</details>
+{% endblock %}

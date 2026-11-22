@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+<h1>Plazos de los próximos 30 días</h1>
+<p class="muted">Hoy: {{ today|fecha }}. El sistema revisa los casos cada mañana y envía las alertas por correo automáticamente.</p>
+{% if deadlines %}
+<table>
+  <thead><tr><th>Fecha límite</th><th>Acción</th><th>Caso</th><th>Cliente</th><th>Avisos (días antes)</th></tr></thead>
+  <tbody>
+  {% for d in deadlines %}
+    {% set left = (d.due_date - today).days %}
+    <tr class="{{ 'overdue' if left < 0 else 'today' if left == 0 else 'soon' if left <= 3 else '' }}">
+      <td>{{ d.due_date|fecha }}<br><small>{% if left < 0 %}vencido hace {{ -left }} día(s){% elif left == 0 %}vence hoy{% else %}faltan {{ left }} día(s){% endif %}</small></td>
+      <td>{{ d.title }}</td>
+      <td><a href="/casos/{{ d.case.id }}">{{ d.case.reference }}</a></td>
+      <td>{{ d.case.client.full_name }}</td>
+      <td>{{ d.alert_days }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p>No hay plazos pendientes en los próximos 30 días.</p>{% endif %}
+
+<h2>Documentos pendientes de clientes</h2>
+{% if pending_docs %}
+<table>
+  <thead><tr><th>Documento</th><th>Cliente</th><th>Caso</th><th>Fecha límite</th><th>Envíos</th></tr></thead>
+  <tbody>
+  {% for r in pending_docs %}
+    <tr>
+      <td>{{ r.description }}</td>
+      <td>{{ r.case.client.full_name }}</td>
+      <td><a href="/casos/{{ r.case.id }}">{{ r.case.reference }}</a></td>
+      <td>{{ r.due_date|fecha }}</td>
+      <td>{{ r.sent_count }}{% if r.last_sent_at %} (último {{ r.last_sent_at|fecha }}){% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p>No hay documentos pendientes.</p>{% endif %}
+{% endblock %}
