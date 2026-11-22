@@ -5,7 +5,7 @@ services:
     name: alertas-legales
     runtime: docker
     region: frankfurt # datos en la UE (RGPD)
-    plan: starter
+    plan: free # gratis; el panel se duerme tras 15 min sin uso (las alertas no se ven afectadas)
     healthCheckPath: /salud
     envVars:
       - key: ENVIRONMENT

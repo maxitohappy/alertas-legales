@@ -71,11 +71,19 @@ Tests y análisis: `pytest`, `ruff check .`, `bandit -r app -c pyproject.toml`, 
 
 1. **Base de datos:** cree un proyecto en [Neon](https://neon.tech) en región UE (Frankfurt) y copie la
    cadena de conexión (`postgresql://...?sslmode=require`).
-2. **Almacenamiento:** cree un bucket privado en Cloudflare R2 o AWS S3 (UE) y unas credenciales con
-   acceso solo a ese bucket.
+2. **Almacenamiento:** cree un bucket **privado** en [Supabase Storage](https://supabase.com) (gratis,
+   sin tarjeta, región UE), Cloudflare R2 o AWS S3, y unas credenciales S3 con acceso a ese bucket.
+   En Supabase: *Project Settings → Storage → S3 Connection* (endpoint, región y *New access key*).
 3. **App web:** en [Render](https://render.com) → *New → Blueprint* → este repositorio (usa
-   `render.yaml`, región Frankfurt). Complete las variables secretas. Las migraciones se aplican solas.
-4. **Administrador:** desde la *Shell* de Render: `python -m scripts.create_admin correo "Nombre"`.
+   `render.yaml`: plan gratuito, región Frankfurt). Complete las variables secretas. Las migraciones
+   se aplican solas.
+4. **Administrador:** el plan gratuito de Render no tiene consola, así que se crea desde su PC
+   apuntando a la base de datos de producción (PowerShell):
+   ```powershell
+   $env:DATABASE_URL = Read-Host "Cadena de conexión de Neon"
+   python -m scripts.create_admin admin@despacho.es "Nombre Apellido"
+   Remove-Item Env:DATABASE_URL
+   ```
 5. **Revisión diaria:** en GitHub → *Settings → Secrets and variables → Actions*, cree los secrets:
    `DATABASE_URL`, `SECRET_KEY`, `ENCRYPTION_KEY` (los **mismos** que en Render), `APP_BASE_URL`,
    `FIRM_NAME`, `FIRM_ALERT_EMAILS`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`; y la variable
