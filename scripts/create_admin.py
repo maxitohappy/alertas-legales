@@ -17,8 +17,8 @@ def main() -> int:
     p.add_argument("full_name")
     args = p.parse_args()
     password = getpass.getpass("Contraseña (mín. 12, mayúsculas, minúsculas y números): ")
-    if err := password_policy_error(password):
-        print(err)
+    if password_policy_error(password):
+        print("La contraseña no cumple la política: mínimo 12 caracteres con mayúsculas, minúsculas y números.")
         return 1
     if getpass.getpass("Repita la contraseña: ") != password:
         print("Las contraseñas no coinciden.")

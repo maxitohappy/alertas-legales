@@ -196,14 +196,14 @@ def deadline_create(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    _get(db, Case, case_id)
+    case = _get(db, Case, case_id)
     try:
         days = parse_alert_days(alert_days)
     except ValueError as exc:
         flash(request, f"Días de aviso inválidos: {exc}", "error")
-        return RedirectResponse(f"/casos/{case_id}", status_code=303)
+        return RedirectResponse(f"/casos/{case.id}", status_code=303)
     d = Deadline(
-        case_id=case_id,
+        case_id=case.id,
         title=title.strip(),
         due_date=_parse_date(due_date, "fecha límite"),
         alert_days=",".join(str(n) for n in days),
@@ -213,7 +213,7 @@ def deadline_create(
     db.commit()
     audit(db, request, user.id, "plazo_creado", f"plazo={d.id}")
     flash(request, "Plazo registrado. El sistema avisará automáticamente.")
-    return RedirectResponse(f"/casos/{case_id}", status_code=303)
+    return RedirectResponse(f"/casos/{case.id}", status_code=303)
 
 
 @router.post("/plazos/{deadline_id}/completar")

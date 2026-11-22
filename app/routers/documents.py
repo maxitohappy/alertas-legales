@@ -37,7 +37,7 @@ def request_create(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Fecha inválida") from exc
     req = DocumentRequest(
-        case_id=case_id, description=description.strip(), due_date=due, reminder_every_days=reminder_every_days
+        case_id=case.id, description=description.strip(), due_date=due, reminder_every_days=reminder_every_days
     )
     db.add(req)
     db.commit()
@@ -46,7 +46,7 @@ def request_create(
         _send(db, request, req)
     else:
         flash(request, "Solicitud registrada. Se enviará al cliente en la próxima revisión diaria.")
-    return RedirectResponse(f"/casos/{case_id}", status_code=303)
+    return RedirectResponse(f"/casos/{case.id}", status_code=303)
 
 
 def _send(db: Session, request: Request, req: DocumentRequest) -> None:
