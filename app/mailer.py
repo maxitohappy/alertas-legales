@@ -1,6 +1,7 @@
 """Envío de correo por SMTP (Gmail / Google Workspace) con TLS obligatorio."""
 
 import logging
+import os
 import smtplib
 import ssl
 import time
@@ -19,6 +20,12 @@ class Mail:
     subject: str
     text: str
     html: str | None = None
+
+
+def mask_email(addr: str) -> str:
+    """m***@gmail.com — para registros sin datos personales."""
+    user, _, domain = addr.partition("@")
+    return f"{user[:1]}***@{domain}" if domain else "***"
 
 
 class MailError(RuntimeError):
@@ -66,7 +73,12 @@ class FakeMailer:
 
     def send(self, mail: Mail) -> None:
         self.sent.append(mail)
-        if self.echo:
+        if not self.echo:
+            return
+        if os.environ.get("GITHUB_ACTIONS"):
+            # Los registros de un repositorio público son públicos: sin datos personales.
+            print(f"[SIMULACIÓN] Correo a {mask_email(mail.to)} ({len(mail.text)} caracteres)")
+        else:
             print(f"\n=== [SIMULACIÓN] Para: {mail.to}\n    Asunto: {mail.subject}\n{mail.text}")
 
 

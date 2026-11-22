@@ -83,3 +83,12 @@ def test_dry_run_no_guarda_nada(db, capsys):
 
 def test_sin_smtp_el_envio_real_falla_con_codigo(db):
     assert daily_check.main(["--date", "2026-12-04"]) == 2
+
+
+def test_en_github_actions_la_simulacion_no_publica_datos_personales(db, capsys, monkeypatch):
+    seed(db)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert daily_check.main(["--date", "2026-12-04", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "juan@example.com" not in out and "Juan Pérez" not in out and "/subir/" not in out
+    assert "j***@example.com" in out

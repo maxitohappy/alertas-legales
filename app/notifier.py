@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from app import alerts
 from app.business_days import SpainCalendar
 from app.config import get_settings
-from app.mailer import Mail, MailError
+from app.mailer import Mail, MailError, mask_email
 from app.models import Case, Deadline, DocumentRequest, Notification, utcnow
 from app.security import new_upload_token
 from app.web import local_date, render_email
@@ -142,7 +142,7 @@ def send_firm_digests(db: Session, today: date, mailer, cal: SpainCalendar, summ
         try:
             mailer.send(Mail(recipient, subject, text, html))
         except MailError as exc:
-            summary.errors.append(f"Resumen a {recipient}: {exc}")
+            summary.errors.append(f"Resumen a {mask_email(recipient)}: {exc}")
             continue
         summary.digests_sent += 1
         summary.items_notified += len(items)
