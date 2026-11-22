@@ -1,0 +1,57 @@
+name: Envíos pendientes del panel
+
+# El plan gratuito de Render bloquea el correo saliente (SMTP). El panel deja en cola
+# las solicitudes "Enviar ya" y los avisos de "Documento recibido", y este workflow
+# los envía con Gmail cada 15 minutos.
+on:
+  schedule:
+    - cron: "*/15 6-20 * * *" # cada 15 min, aprox. de 07:00 a 22:00 hora de Madrid
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: envio-correos
+  cancel-in-progress: false
+
+jobs:
+  queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ENVIRONMENT: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+      APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+      FIRM_NAME: ${{ secrets.FIRM_NAME }}
+      FIRM_ALERT_EMAILS: ${{ secrets.FIRM_ALERT_EMAILS }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      HOLIDAYS_SUBDIV: ${{ vars.HOLIDAYS_SUBDIV }}
+      TIMEZONE: Europe/Madrid
+    steps:
+      - name: Comprobar configuración
+        id: cfg
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::notice::Secret DATABASE_URL no configurado; se omite."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ready == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.ready == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        if: steps.cfg.outputs.ready == 'true'
+        run: pip install -r requirements.txt
+      - name: Enviar correos en cola
+        if: steps.cfg.outputs.ready == 'true'
+        run: python -m app.jobs.daily_check --solo-cola

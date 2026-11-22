@@ -3,6 +3,7 @@
 python -m app.jobs.daily_check                      # revisa hoy y envía correos
 python -m app.jobs.daily_check --date 2026-12-04    # simula otra fecha
 python -m app.jobs.daily_check --dry-run            # no envía ni guarda nada, solo muestra
+python -m app.jobs.daily_check --solo-cola          # solo correos pedidos desde el panel (cada 15 min)
 """
 
 import argparse
@@ -13,7 +14,7 @@ from datetime import date
 from app.config import get_settings
 from app.db import SessionLocal
 from app.mailer import FakeMailer, get_mailer
-from app.notifier import run_daily_check
+from app.notifier import run_daily_check, run_queue
 from app.web import local_today
 
 
@@ -22,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Revisión diaria de plazos y documentos")
     parser.add_argument("--date", type=date.fromisoformat, help="Fecha a revisar (AAAA-MM-DD)")
     parser.add_argument("--dry-run", action="store_true", help="Simular sin enviar ni guardar")
+    parser.add_argument("--solo-cola", action="store_true", help="Enviar solo los correos en cola del panel")
     args = parser.parse_args(argv)
 
     settings = get_settings()
@@ -36,13 +38,15 @@ def main(argv: list[str] | None = None) -> int:
 
     logging.info("Revisión del %s%s", today.strftime("%d.%m.%Y"), " (simulación)" if args.dry_run else "")
     with SessionLocal() as db:
-        summary = run_daily_check(db, today, mailer, persist=not args.dry_run)
+        runner = run_queue if args.solo_cola else run_daily_check
+        summary = runner(db, today, mailer, persist=not args.dry_run)
 
     logging.info(
-        "Resúmenes enviados: %s | Acciones notificadas: %s | Solicitudes a clientes: %s",
+        "Resúmenes enviados: %s | Acciones notificadas: %s | Solicitudes a clientes: %s | Avisos de recepción: %s",
         summary.digests_sent,
         summary.items_notified,
         summary.document_requests_sent,
+        summary.received_notices_sent,
     )
     for err in summary.errors:
         logging.error(err)

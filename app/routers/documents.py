@@ -9,11 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import audit, current_user
-from app.mailer import MailError, get_mailer
 from app.models import Case, Document, DocumentRequest, User
-from app.notifier import send_document_request
 from app.storage import load_decrypted
-from app.web import flash, local_today
+from app.web import flash
 
 router = APIRouter()
 
@@ -50,11 +48,10 @@ def request_create(
 
 
 def _send(db: Session, request: Request, req: DocumentRequest) -> None:
-    try:
-        send_document_request(db, req, get_mailer(), local_today())
-        flash(request, f"Solicitud enviada a {req.case.client.email}.")
-    except MailError:
-        flash(request, "No se pudo enviar el correo. Revise la configuración SMTP.", "error")
+    """Deja el correo en cola; GitHub Actions lo envía en los próximos minutos."""
+    req.send_now = True
+    db.commit()
+    flash(request, f"Solicitud en cola: se enviará a {req.case.client.email} en los próximos 15-20 minutos.")
 
 
 @router.post("/solicitudes/{req_id}/enviar")

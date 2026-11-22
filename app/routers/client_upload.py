@@ -9,9 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app.deps import audit
-from app.mailer import MailError, get_mailer
 from app.models import Document, DocumentRequest, as_aware, utcnow
-from app.notifier import notify_document_received
 from app.security import client_ip, hash_token, rate_limiter
 from app.storage import MAX_FILES_PER_UPLOAD, UploadRejected, save_encrypted, validate_upload
 from app.web import templates
@@ -83,11 +81,8 @@ async def upload(token: str, request: Request, files: list[UploadFile] = File(..
         )
     # Enlace de un solo uso: se invalida al recibir la documentación.
     req.status, req.received_at, req.token_hash = "recibido", utcnow(), None
+    req.received_notified = False  # el aviso al despacho lo envía GitHub Actions
     db.commit()
     audit(db, request, None, "documento_recibido", f"solicitud={req.id} archivos={len(validated)}")
 
-    try:
-        notify_document_received(req, [v.original_name for v in validated], get_mailer())
-    except MailError:
-        log.warning("No se pudo notificar la recepción de la solicitud %s", req.id)
     return templates.TemplateResponse(request, "upload_ok.html", {"count": len(validated)})

@@ -144,7 +144,15 @@ def test_cliente_sube_pdf_y_queda_cifrado(client, db, fake_mailer):
     assert get_backend().get(doc.stored_name) != PDF  # cifrado en reposo
     assert load_decrypted(doc.stored_name) == PDF
     assert db.get(DocumentRequest, req.id).status == "recibido"
-    assert fake_mailer.sent and "despacho@example.com" in [m.to for m in fake_mailer.sent]
+    # El panel no envía correo (Render gratis bloquea SMTP): queda en cola para GitHub Actions.
+    assert fake_mailer.sent == []
+    from app.notifier import run_queue
+
+    run_queue(db, date.today(), fake_mailer)
+    assert [m.to for m in fake_mailer.sent] == ["despacho@example.com"]
+    assert "dni.pdf" in fake_mailer.sent[0].text
+    run_queue(db, date.today(), fake_mailer)
+    assert len(fake_mailer.sent) == 1  # no se repite
     # enlace de un solo uso
     assert client.get(f"/subir/{raw}").status_code == 404
 
@@ -227,3 +235,24 @@ def test_primer_login_obliga_a_configurar_2fa(client, db):
     assert "data:image/svg+xml;base64," in r.text
     assert client.get("/", follow_redirects=False).status_code == 303
     assert date.today()
+
+
+def test_enviar_ya_queda_en_cola_y_lo_envia_github(logged_in, db, fake_mailer):
+    from app.notifier import run_queue
+
+    client = Client(full_name="Juan Pérez", email="juan@example.com")
+    case = Case(reference="PA 2/2026", title="Juan", client=client)
+    db.add(case)
+    db.commit()
+    r = logged_in.get(f"/casos/{case.id}")
+    r = logged_in.post(
+        f"/casos/{case.id}/solicitudes",
+        data={"description": "Copia del DNI", "send_now": "true", "csrf_token": csrf_from(r.text)},
+    )
+    assert "en cola" in r.text
+    db.expire_all()
+    summary = run_queue(db, date(2026, 11, 22), fake_mailer)  # domingo: lo pedido a mano se envía igual
+    assert summary.document_requests_sent == 1 and fake_mailer.sent[0].to == "juan@example.com"
+    db.expire_all()
+    req = db.scalar(select(DocumentRequest))
+    assert req.send_now is False and req.sent_count == 1 and req.token_hash

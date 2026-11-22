@@ -48,14 +48,8 @@ def db():
 
 
 @pytest.fixture
-def fake_mailer(monkeypatch):
-    mailer = FakeMailer()
-    import app.routers.client_upload as cu
-    import app.routers.documents as docs
-
-    monkeypatch.setattr(docs, "get_mailer", lambda: mailer)
-    monkeypatch.setattr(cu, "get_mailer", lambda: mailer)
-    return mailer
+def fake_mailer():
+    return FakeMailer()
 
 
 @pytest.fixture

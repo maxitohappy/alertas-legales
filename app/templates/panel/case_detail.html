@@ -53,7 +53,7 @@
       <td>{{ r.description }}</td>
       <td>{{ r.due_date|fecha }}</td>
       <td>{{ r.reminder_every_days }} día(s)</td>
-      <td>{{ r.status }}{% if r.sent_count %}<br><small class="muted">{{ r.sent_count }} envío(s), último {{ r.last_sent_at|fecha }}</small>{% endif %}</td>
+      <td>{{ r.status }}{% if r.send_now %}<br><small class="warn">Envío en cola (15-20 min)</small>{% endif %}{% if r.sent_count %}<br><small class="muted">{{ r.sent_count }} envío(s), último {{ r.last_sent_at|fecha }}</small>{% endif %}</td>
       <td>{% for doc in r.documents %}<a href="/documentos/{{ doc.id }}/descargar">{{ doc.original_name }}</a> <small class="muted">({{ (doc.size / 1024)|round(1) }} KB)</small><br>{% else %}—{% endfor %}</td>
       <td class="actions">
         {% if r.status == 'pendiente' %}

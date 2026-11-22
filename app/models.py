@@ -9,6 +9,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -133,6 +135,9 @@ class DocumentRequest(Base):
     last_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)  # día de revisión del último envío
     sent_count: Mapped[int] = mapped_column(Integer, default=0)
     received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Cola de correos: el panel no envía (Render gratis bloquea SMTP); lo hace GitHub Actions.
+    send_now: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    received_notified: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     case: Mapped[Case] = relationship(back_populates="document_requests")

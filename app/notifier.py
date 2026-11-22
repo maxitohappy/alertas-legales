@@ -52,6 +52,7 @@ class Summary:
     digests_sent: int = 0
     items_notified: int = 0
     document_requests_sent: int = 0
+    received_notices_sent: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -217,9 +218,53 @@ def notify_document_received(req: DocumentRequest, filenames: list[str], mailer)
         mailer.send(Mail(r, f"Documento recibido — {req.case.client.full_name} ({req.case.reference})", text, html))
 
 
+def process_queue(db: Session, today: date, mailer, summary: Summary, persist: bool) -> None:
+    """Correos pedidos desde el panel: solicitudes 'Enviar ya' y avisos de documentos recibidos."""
+    queued = db.scalars(
+        select(DocumentRequest)
+        .where(DocumentRequest.status == "pendiente", DocumentRequest.send_now.is_(True))
+        .options(joinedload(DocumentRequest.case).joinedload(Case.client))
+    ).all()
+    for req in queued:
+        try:
+            send_document_request(db, req, mailer, today, persist)
+            summary.document_requests_sent += 1
+        except MailError as exc:
+            summary.errors.append(f"Solicitud {req.id}: {exc}")
+            continue
+        if persist:
+            req.send_now = False
+            db.commit()
+
+    received = db.scalars(
+        select(DocumentRequest)
+        .where(DocumentRequest.status == "recibido", DocumentRequest.received_notified.is_(False))
+        .options(joinedload(DocumentRequest.case).joinedload(Case.client))
+    ).all()
+    for req in received:
+        try:
+            notify_document_received(req, [d.original_name for d in req.documents], mailer)
+            summary.received_notices_sent += 1
+        except MailError as exc:
+            summary.errors.append(f"Aviso de recepción {req.id}: {exc}")
+            continue
+        if persist:
+            req.received_notified = True
+            db.commit()
+
+
+def run_queue(db: Session, today: date, mailer, persist: bool = True) -> Summary:
+    summary = Summary()
+    process_queue(db, today, mailer, summary, persist)
+    if not persist:
+        db.rollback()
+    return summary
+
+
 def run_daily_check(db: Session, today: date, mailer, persist: bool = True) -> Summary:
     cal = calendar()
     summary = Summary()
+    process_queue(db, today, mailer, summary, persist)
     send_firm_digests(db, today, mailer, cal, summary, persist)
     send_client_requests(db, today, mailer, cal, summary, persist)
     if not persist:
