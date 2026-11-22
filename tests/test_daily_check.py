@@ -72,7 +72,8 @@ def test_plazo_completado_no_genera_alerta(db):
     assert all(x.to == "juan@example.com" for x in m.sent)
 
 
-def test_dry_run_no_guarda_nada(db, capsys):
+def test_dry_run_no_guarda_nada(db, capsys, monkeypatch):
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     seed(db)
     assert daily_check.main(["--date", "2026-12-04", "--dry-run"]) == 0
     assert "Presentar recurso de libertad" in capsys.readouterr().out
