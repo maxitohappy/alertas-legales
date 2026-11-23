@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     s3_secret_key: str = ""
     s3_region: str = "auto"
 
+    # Aviso inmediato a GitHub Actions para enviar los correos en cola (ver app/dispatch.py)
+    github_dispatch_token: str = ""
+    github_repo: str = ""
+
     upload_max_mb: int = 10
     upload_token_days: int = 7
     session_idle_minutes: int = 30
@@ -51,6 +55,15 @@ class Settings(BaseSettings):
     def _strong_secret(cls, v: str) -> str:
         if len(v) < 32:
             raise ValueError("SECRET_KEY debe tener al menos 32 caracteres")
+        return v
+
+    @field_validator("github_repo")
+    @classmethod
+    def _valid_repo(cls, v: str) -> str:
+        import re
+
+        if v and not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", v):
+            raise ValueError("GITHUB_REPO debe tener el formato usuario/repositorio")
         return v
 
     @property

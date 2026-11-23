@@ -256,3 +256,47 @@ def test_enviar_ya_queda_en_cola_y_lo_envia_github(logged_in, db, fake_mailer):
     db.expire_all()
     req = db.scalar(select(DocumentRequest))
     assert req.send_now is False and req.sent_count == 1 and req.token_hash
+
+
+def test_aviso_inmediato_a_github_al_pedir_y_al_recibir(logged_in, client, db, monkeypatch):
+    import app.routers.client_upload as cu
+    import app.routers.documents as docs
+
+    calls = []
+    monkeypatch.setattr(docs, "dispatch_enabled", lambda: True)
+    monkeypatch.setattr(docs, "trigger_queue_send", lambda: calls.append("pedido") or True)
+    monkeypatch.setattr(cu, "trigger_queue_send", lambda: calls.append("recibido") or True)
+
+    c = Client(full_name="Juan Pérez", email="juan@example.com")
+    case = Case(reference="PA 3/2026", title="Juan", client=c)
+    db.add(case)
+    db.commit()
+    r = logged_in.get(f"/casos/{case.id}")
+    r = logged_in.post(
+        f"/casos/{case.id}/solicitudes",
+        data={"description": "DNI", "send_now": "true", "csrf_token": csrf_from(r.text)},
+    )
+    assert "1-2 minutos" in r.text and calls == ["pedido"]
+
+    raw, _ = make_request(db)
+    r = client.get(f"/subir/{raw}")
+    client.post(
+        f"/subir/{raw}", data={"csrf_token": csrf_from(r.text)}, files={"files": ("a.pdf", PDF, "application/pdf")}
+    )
+    assert calls == ["pedido", "recibido"]
+
+
+def test_dispatch_sin_token_no_hace_nada_y_fallo_de_red_no_rompe(monkeypatch):
+    from app import dispatch
+    from app.config import get_settings
+
+    assert dispatch.trigger_queue_send() is False  # sin token configurado
+    s = get_settings()
+    monkeypatch.setattr(s, "github_dispatch_token", "x")
+    monkeypatch.setattr(s, "github_repo", "usuario/repo")
+
+    def boom(*a, **k):
+        raise dispatch.urllib.error.URLError("sin red")
+
+    monkeypatch.setattr(dispatch.urllib.request, "urlopen", boom)
+    assert dispatch.trigger_queue_send() is False

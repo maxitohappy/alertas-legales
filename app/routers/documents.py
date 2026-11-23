@@ -3,12 +3,13 @@
 from datetime import date
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import audit, current_user
+from app.dispatch import dispatch_enabled, trigger_queue_send
 from app.models import Case, Document, DocumentRequest, User
 from app.storage import load_decrypted
 from app.web import flash
@@ -20,6 +21,7 @@ router = APIRouter()
 def request_create(
     case_id: int,
     request: Request,
+    background: BackgroundTasks,
     description: str = Form(..., min_length=3, max_length=500),
     due_date: str = Form(""),
     reminder_every_days: int = Form(3, ge=1, le=30),
@@ -41,25 +43,36 @@ def request_create(
     db.commit()
     audit(db, request, user.id, "solicitud_creada", f"solicitud={req.id}")
     if send_now:
-        _send(db, request, req)
+        _send(db, request, req, background)
     else:
         flash(request, "Solicitud registrada. Se enviará al cliente en la próxima revisión diaria.")
     return RedirectResponse(f"/casos/{case.id}", status_code=303)
 
 
-def _send(db: Session, request: Request, req: DocumentRequest) -> None:
-    """Deja el correo en cola; GitHub Actions lo envía en los próximos minutos."""
+def _send(db: Session, request: Request, req: DocumentRequest, background: BackgroundTasks) -> None:
+    """Deja el correo en cola y pide a GitHub Actions que lo envíe ya (respaldo: cada 15 min)."""
     req.send_now = True
     db.commit()
-    flash(request, f"Solicitud en cola: se enviará a {req.case.client.email} en los próximos 15-20 minutos.")
+    if dispatch_enabled():
+        background.add_task(trigger_queue_send)
+        when = "en 1-2 minutos"
+    else:
+        when = "en los próximos 15-20 minutos"
+    flash(request, f"Solicitud en cola: se enviará a {req.case.client.email} {when}.")
 
 
 @router.post("/solicitudes/{req_id}/enviar")
-def request_send(req_id: int, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def request_send(
+    req_id: int,
+    request: Request,
+    background: BackgroundTasks,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
     req = db.get(DocumentRequest, req_id)
     if req is None or req.status != "pendiente":
         raise HTTPException(status_code=404)
-    _send(db, request, req)
+    _send(db, request, req, background)
     audit(db, request, user.id, "solicitud_enviada", f"solicitud={req.id}")
     return RedirectResponse(f"/casos/{req.case_id}", status_code=303)
 

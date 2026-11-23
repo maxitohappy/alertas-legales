@@ -44,3 +44,7 @@ services:
         sync: false
       - key: S3_REGION
         sync: false
+      - key: GITHUB_REPO
+        value: maxitohappy/alertas-legales
+      - key: GITHUB_DISPATCH_TOKEN
+        sync: false

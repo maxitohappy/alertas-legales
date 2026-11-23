@@ -2,13 +2,14 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
 from app.deps import audit
+from app.dispatch import trigger_queue_send
 from app.models import Document, DocumentRequest, as_aware, utcnow
 from app.security import client_ip, hash_token, rate_limiter
 from app.storage import MAX_FILES_PER_UPLOAD, UploadRejected, save_encrypted, validate_upload
@@ -46,7 +47,13 @@ def upload_form(token: str, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/subir/{token}")
-async def upload(token: str, request: Request, files: list[UploadFile] = File(...), db: Session = Depends(get_db)):
+async def upload(
+    token: str,
+    request: Request,
+    background: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+):
     _limit(request)
     req = _request_for_token(db, token)
     ctx = {"req": req, "max_mb": get_settings().upload_max_mb, "max_files": MAX_FILES_PER_UPLOAD}
@@ -84,5 +91,6 @@ async def upload(token: str, request: Request, files: list[UploadFile] = File(..
     req.received_notified = False  # el aviso al despacho lo envía GitHub Actions
     db.commit()
     audit(db, request, None, "documento_recibido", f"solicitud={req.id} archivos={len(validated)}")
+    background.add_task(trigger_queue_send)  # aviso al despacho en ~1 minuto
 
     return templates.TemplateResponse(request, "upload_ok.html", {"count": len(validated)})
