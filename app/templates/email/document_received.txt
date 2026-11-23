@@ -4,4 +4,10 @@ Solicitud: {{ req.description }}
 Caso: {{ case.reference }} — {{ case.title }}
 Archivos: {{ filenames|join(", ") }}
 
-Revíselos en: {{ base_url }}/casos/{{ case.id }}
+{% if attached %}Los documentos van adjuntos a este correo.
+{% elif not_attached == "too_big" %}Los documentos superan el tamaño máximo para adjuntar: descárguelos desde el panel.
+{% else %}Descargue los documentos desde el panel.
+{% endif %}
+Ver el caso: {{ base_url }}/casos/{{ case.id }}
+
+Confidencial: contiene datos personales del cliente. No reenvíe este correo fuera del despacho.

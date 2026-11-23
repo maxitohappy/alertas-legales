@@ -20,6 +20,7 @@ class Mail:
     subject: str
     text: str
     html: str | None = None
+    attachments: list[tuple[str, str, bytes]] = field(default_factory=list)  # (nombre, content-type, datos)
 
 
 def mask_email(addr: str) -> str:
@@ -46,6 +47,9 @@ class SMTPMailer:
         msg.set_content(mail.text)
         if mail.html:
             msg.add_alternative(mail.html, subtype="html")
+        for filename, content_type, data in mail.attachments:
+            maintype, _, subtype = content_type.partition("/")
+            msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
         context = ssl.create_default_context()  # valida certificado del servidor
         last_exc: Exception | None = None
         for attempt in range(1, self.retries + 1):

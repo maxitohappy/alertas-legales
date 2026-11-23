@@ -91,6 +91,10 @@ puede descargarlos y cada descarga queda auditada. Recomendación adicional: ana
 - Si un atacante obtiene la contraseña **y** el segundo factor de un abogado, accede a los casos:
   mitigar con formación y revisión de la auditoría.
 - Los correos viajan cifrados hasta Gmail (TLS), pero no cifrados de extremo a extremo: por eso el
-  resumen diario contiene solo lo mínimo necesario y los documentos nunca se envían adjuntos.
+  resumen diario contiene solo lo mínimo necesario. **Decisión del despacho:** los documentos que sube
+  el cliente se adjuntan al aviso interno "Documento recibido" (solo a los correos del despacho, máx.
+  18 MB por correo). Es más cómodo, pero quedan copias en el buzón de Gmail: proteja esas cuentas con
+  2FA, no reenvíe esos correos fuera del despacho y, si se prefiere máxima confidencialidad, desactive
+  los adjuntos con `ATTACH_RECEIVED_DOCUMENTS=false` (el aviso llegará con el enlace al panel).
 - El primer inicio de sesión de un usuario nuevo configura el 2FA: entregar la contraseña inicial por
   un canal distinto al correo y pedir que se cambie.

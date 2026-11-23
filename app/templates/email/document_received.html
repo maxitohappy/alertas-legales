@@ -6,5 +6,9 @@
   <li><strong>Caso:</strong> {{ case.reference }} — {{ case.title }}</li>
   <li><strong>Archivos:</strong> {{ filenames|join(", ") }}</li>
 </ul>
+{% if attached %}<p>📎 Los documentos van <strong>adjuntos</strong> a este correo.</p>
+{% elif not_attached == "too_big" %}<p>Los documentos superan el tamaño máximo para adjuntar: descárguelos desde el panel.</p>
+{% else %}<p>Descargue los documentos desde el panel.</p>{% endif %}
 <p><a href="{{ base_url }}/casos/{{ case.id }}">Ver el caso en el panel</a></p>
+<p style="font-size:12px;color:#7b8794;">Confidencial: contiene datos personales del cliente. No reenvíe este correo fuera del despacho.</p>
 </body></html>

@@ -151,6 +151,8 @@ def test_cliente_sube_pdf_y_queda_cifrado(client, db, fake_mailer):
     run_queue(db, date.today(), fake_mailer)
     assert [m.to for m in fake_mailer.sent] == ["despacho@example.com"]
     assert "dni.pdf" in fake_mailer.sent[0].text
+    # el documento llega adjunto y descifrado
+    assert fake_mailer.sent[0].attachments == [("dni.pdf", "application/pdf", PDF)]
     run_queue(db, date.today(), fake_mailer)
     assert len(fake_mailer.sent) == 1  # no se repite
     # enlace de un solo uso
@@ -300,3 +302,52 @@ def test_dispatch_sin_token_no_hace_nada_y_fallo_de_red_no_rompe(monkeypatch):
 
     monkeypatch.setattr(dispatch.urllib.request, "urlopen", boom)
     assert dispatch.trigger_queue_send() is False
+
+
+def test_documentos_grandes_no_se_adjuntan_pero_se_avisa(db, fake_mailer, monkeypatch):
+    from app.config import get_settings
+    from app.notifier import run_queue
+    from app.storage import save_encrypted
+
+    _, req = make_request(db)
+    db.add(
+        Document(
+            request_id=req.id,
+            stored_name=save_encrypted(PDF),
+            original_name="grande.pdf",
+            content_type="application/pdf",
+            size=50 * 1024 * 1024,
+            sha256="0" * 64,
+        )
+    )
+    req.status, req.received_notified = "recibido", False
+    db.commit()
+    monkeypatch.setattr(get_settings(), "attach_max_total_mb", 18)
+    run_queue(db, date.today(), fake_mailer)
+    assert fake_mailer.sent[0].attachments == [] and "superan el tamaño" in fake_mailer.sent[0].text
+
+
+def test_correo_smtp_incluye_adjunto(monkeypatch):
+    import smtplib
+
+    from app.mailer import Mail, SMTPMailer
+
+    sent = {}
+
+    class FakeSMTP:
+        def __init__(self, *a, **k): ...
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def starttls(self, **k): ...
+        def login(self, *a): ...
+        def send_message(self, msg):
+            sent["msg"] = msg
+
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
+    SMTPMailer().send(Mail("a@example.com", "Asunto", "texto", "<p>x</p>", [("dni.pdf", "application/pdf", PDF)]))
+    parts = [p for p in sent["msg"].iter_attachments()]
+    assert parts[0].get_filename() == "dni.pdf" and parts[0].get_content() == PDF

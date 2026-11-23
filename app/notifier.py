@@ -209,13 +209,39 @@ def send_client_requests(db: Session, today: date, mailer, cal: SpainCalendar, s
             summary.errors.append(f"Solicitud {req.id}: {exc}")
 
 
+def _attachments_for(req: DocumentRequest) -> tuple[list[tuple[str, str, bytes]], str | None]:
+    """Descifra los documentos para adjuntarlos. Devuelve (adjuntos, motivo_si_no_se_adjuntan)."""
+    s = get_settings()
+    if not s.attach_received_documents:
+        return [], "disabled"
+    total = sum(d.size for d in req.documents)
+    if total > s.attach_max_total_mb * 1024 * 1024:
+        return [], "too_big"
+    try:
+        from app.storage import load_decrypted
+
+        return [(d.original_name, d.content_type, load_decrypted(d.stored_name)) for d in req.documents], None
+    except Exception as exc:  # almacenamiento no accesible: se avisa igual, sin adjuntos
+        log.warning("No se pudieron adjuntar los documentos de la solicitud %s: %s", req.id, type(exc).__name__)
+        return [], "unavailable"
+
+
 def notify_document_received(req: DocumentRequest, filenames: list[str], mailer) -> None:
     rec = set(get_settings().firm_emails)
     if req.case.responsible:
         rec.add(req.case.responsible.email.lower())
-    text, html = render_email("document_received", req=req, case=req.case, filenames=filenames)
+    attachments, not_attached = _attachments_for(req)
+    text, html = render_email(
+        "document_received",
+        req=req,
+        case=req.case,
+        filenames=filenames,
+        attached=bool(attachments),
+        not_attached=not_attached,
+    )
+    subject = f"Documento recibido — {req.case.client.full_name} ({req.case.reference})"
     for r in sorted(rec):
-        mailer.send(Mail(r, f"Documento recibido — {req.case.client.full_name} ({req.case.reference})", text, html))
+        mailer.send(Mail(r, subject, text, html, attachments=attachments))
 
 
 def process_queue(db: Session, today: date, mailer, summary: Summary, persist: bool) -> None:

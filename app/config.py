@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     github_dispatch_token: str = ""
     github_repo: str = ""
 
+    # Adjuntar los documentos recibidos al aviso del despacho (límite total por correo)
+    attach_received_documents: bool = True
+    attach_max_total_mb: int = 18
+
     upload_max_mb: int = 10
     upload_token_days: int = 7
     session_idle_minutes: int = 30
