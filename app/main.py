@@ -10,7 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
-from app.deps import LoginRequired, verify_csrf
+from app.deps import LoginRequired, PasswordChangeRequired, verify_csrf
 from app.routers import auth, client_upload, documents, panel, users
 from app.web import templates
 
@@ -70,6 +70,11 @@ app.include_router(client_upload.router, dependencies=csrf)
 @app.exception_handler(LoginRequired)
 async def _login_required(request: Request, exc: LoginRequired):
     return RedirectResponse("/login", status_code=303)
+
+
+@app.exception_handler(PasswordChangeRequired)
+async def _password_change_required(request: Request, exc: PasswordChangeRequired):
+    return RedirectResponse("/cambiar-contrasena", status_code=303)
 
 
 @app.exception_handler(StarletteHTTPException)

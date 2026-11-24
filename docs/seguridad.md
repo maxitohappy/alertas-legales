@@ -31,7 +31,7 @@ organizativos y de infraestructura** que deben aplicarse al desplegarlo.
 | A04 Diseño inseguro | Enlaces de carga con token aleatorio de 256 bits, guardado **solo como hash SHA-256**, con caducidad (7 días) y **de un solo uso**; el portal no muestra datos del caso | [app/routers/client_upload.py](../app/routers/client_upload.py) |
 | A05 Configuración insegura | Documentación OpenAPI deshabilitada; cabeceras CSP estricta, X-Frame-Options, nosniff, Referrer-Policy `no-referrer`, Permissions-Policy, COOP; `Cache-Control: no-store`; sin cabecera `Server`; contenedor con usuario sin privilegios | [app/main.py](../app/main.py), [Dockerfile](../Dockerfile) |
 | A06 Componentes vulnerables | Versiones fijadas; **pip-audit** en cada push y semanalmente; **Dependabot**; **CodeQL** | [.github/](../.github/) |
-| A07 Fallos de autenticación | **2FA TOTP obligatorio** (configuración forzada en el primer inicio); anti-replay del código; bloqueo de 15 min tras 5 fallos; *rate limiting* por IP; mensajes de error genéricos; tiempo constante aunque el usuario no exista; sesión regenerada al iniciar (anti fijación); expiración por inactividad (30 min) y máxima (8 h); cookie `HttpOnly`, `Secure`, `SameSite=Lax` | [app/routers/auth.py](../app/routers/auth.py) |
+| A07 Fallos de autenticación | **2FA TOTP obligatorio** (configuración forzada en el primer inicio); anti-replay del código; bloqueo de 15 min tras 5 fallos; *rate limiting* por IP; mensajes de error genéricos; tiempo constante aunque el usuario no exista; sesión regenerada al iniciar (anti fijación); expiración por inactividad (30 min) y máxima (8 h); la contraseña inicial o restablecida por un administrador es temporal y **debe cambiarse obligatoriamente** al entrar (solo el usuario conoce la definitiva); cambiar o restablecer la contraseña, o reiniciar el 2FA, **cierra las demás sesiones abiertas**; cookie `HttpOnly`, `Secure`, `SameSite=Lax` | [app/routers/auth.py](../app/routers/auth.py) |
 | A08 Integridad | Token **CSRF** en todos los formularios; validación de archivos por *magic bytes* + extensión; DOCX con macros o *zip bombs* rechazados; hash SHA-256 de cada documento | [app/storage.py](../app/storage.py) |
 | A09 Registro y monitorización | Registro de auditoría (inicios de sesión, fallos, descargas, cambios) con IP; el proceso diario falla con código ≠ 0 y GitHub notifica por correo | [app/models.py](../app/models.py) `AuditLog` |
 | A10 SSRF | La aplicación no hace peticiones a URLs proporcionadas por usuarios | — |
@@ -96,5 +96,5 @@ puede descargarlos y cada descarga queda auditada. Recomendación adicional: ana
   18 MB por correo). Es más cómodo, pero quedan copias en el buzón de Gmail: proteja esas cuentas con
   2FA, no reenvíe esos correos fuera del despacho y, si se prefiere máxima confidencialidad, desactive
   los adjuntos con `ATTACH_RECEIVED_DOCUMENTS=false` (el aviso llegará con el enlace al panel).
-- El primer inicio de sesión de un usuario nuevo configura el 2FA: entregar la contraseña inicial por
-  un canal distinto al correo y pedir que se cambie.
+- El primer inicio de sesión de un usuario nuevo configura el 2FA y obliga a cambiar la contraseña
+  inicial: entregar esa contraseña temporal por un canal distinto al correo.

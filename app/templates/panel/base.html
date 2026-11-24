@@ -16,6 +16,7 @@
     <a href="/casos">Casos</a>
     <a href="/clientes">Clientes</a>
     {% if user.is_admin %}<a href="/usuarios">Usuarios</a>{% endif %}
+    <a href="/cambiar-contrasena">Mi contraseña</a>
     <form method="post" action="/logout" class="inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
       <button class="link">Salir ({{ user.full_name }})</button>

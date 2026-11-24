@@ -19,6 +19,8 @@ plazos al despacho y pide/recuerda documentos a los clientes. Idioma del proyect
 ## Decisiones tomadas
 - Días de aviso configurables por plazo; si el aviso cae en inhábil se adelanta (festivos ES, `HOLIDAYS_SUBDIV=MD`).
 - Idempotencia por tabla `notifications`; avisos atrasados se recuperan al día siguiente.
+- Contraseñas: el admin asigna una inicial/temporal (`must_change_password`) que el usuario debe cambiar en
+  `/cambiar-contrasena`; cambiar/restablecer/reiniciar 2FA incrementa `session_version` y cierra otras sesiones.
 - 2FA TOTP obligatorio, Argon2id, CSRF, CSP, rate limiting, auditoría. Ver `docs/seguridad.md`.
 - Los documentos recibidos se **adjuntan** al aviso del despacho (máx. 18 MB; `ATTACH_RECEIVED_DOCUMENTS`).
 - Secretos solo en `.env` / `.env.produccion` (ignorados por git), GitHub Secrets y Render. Nunca pedir

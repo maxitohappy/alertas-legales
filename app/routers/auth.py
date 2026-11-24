@@ -12,14 +12,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import audit
+from app.deps import audit, current_user
 from app.models import User
 from app.security import (
     client_ip,
     decrypt_str,
     encrypt_str,
+    hash_password,
     is_locked,
     new_totp_secret,
+    password_policy_error,
     rate_limiter,
     register_failed_login,
     register_successful_login,
@@ -27,7 +29,7 @@ from app.security import (
     verify_password,
     verify_totp,
 )
-from app.web import templates
+from app.web import flash, templates
 
 router = APIRouter()
 GENERIC_ERROR = "Correo o contraseña incorrectos."
@@ -42,6 +44,7 @@ def _start_session(request: Request, user: User) -> None:
     # Se regenera la sesión completa para evitar fijación de sesión.
     request.session.clear()
     request.session["user_id"] = user.id
+    request.session["sv"] = user.session_version
     request.session["last_seen"] = int(time.time())
 
 
@@ -174,3 +177,49 @@ def logout(request: Request, db: Session = Depends(get_db)):
     if uid:
         audit(db, request, uid, "logout")
     return RedirectResponse("/login", status_code=303)
+
+
+@router.get("/cambiar-contrasena")
+def password_form(request: Request, user: User = Depends(current_user)):
+    return templates.TemplateResponse(
+        request, "change_password.html", {"user": user, "forced": user.must_change_password, "error": None}
+    )
+
+
+@router.post("/cambiar-contrasena")
+def password_change(
+    request: Request,
+    current_password: str = Form(..., max_length=256),
+    new_password: str = Form(..., max_length=256),
+    confirm_password: str = Form(..., max_length=256),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    _rate_limit(request, "cambio-clave")
+
+    def fail(msg: str):
+        return templates.TemplateResponse(
+            request,
+            "change_password.html",
+            {"user": user, "forced": user.must_change_password, "error": msg},
+            status_code=400,
+        )
+
+    if not verify_password(user.password_hash, current_password):
+        audit(db, request, user.id, "cambio_clave_fallido")
+        return fail("La contraseña actual no es correcta.")
+    if new_password != confirm_password:
+        return fail("La nueva contraseña y su confirmación no coinciden.")
+    if err := password_policy_error(new_password):
+        return fail(err)
+    if verify_password(user.password_hash, new_password):
+        return fail("La nueva contraseña debe ser distinta de la actual.")
+
+    user.password_hash = hash_password(new_password)
+    user.must_change_password = False
+    user.session_version += 1  # cierra cualquier otra sesión abierta con la contraseña anterior
+    db.commit()
+    _start_session(request, user)
+    audit(db, request, user.id, "cambio_clave")
+    flash(request, "Contraseña actualizada. Solo usted la conoce.")
+    return RedirectResponse("/", status_code=303)

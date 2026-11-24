@@ -41,6 +41,10 @@ class User(Base):
     totp_last_step: Mapped[int] = mapped_column(Integer, default=0)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Contraseña inicial o restablecida por un administrador: el usuario debe cambiarla al entrar.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # Se incrementa al cambiar o restablecer la contraseña: invalida las demás sesiones abiertas.
+    session_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     @property

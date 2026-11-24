@@ -15,6 +15,14 @@ class LoginRequired(Exception):
     pass
 
 
+class PasswordChangeRequired(Exception):
+    pass
+
+
+# Rutas permitidas mientras el usuario tiene pendiente cambiar su contraseña.
+PASSWORD_CHANGE_PATHS = ("/cambiar-contrasena", "/logout")
+
+
 def current_user(request: Request, db: Session = Depends(get_db)) -> User:
     uid = request.session.get("user_id")
     if not uid:
@@ -24,10 +32,13 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> User:
         request.session.clear()
         raise LoginRequired()
     user = db.get(User, uid)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or request.session.get("sv") != user.session_version:
+        # Cuenta desactivada, o contraseña cambiada/restablecida desde otra sesión.
         request.session.clear()
         raise LoginRequired()
     request.session["last_seen"] = int(time.time())
+    if user.must_change_password and request.url.path not in PASSWORD_CHANGE_PATHS:
+        raise PasswordChangeRequired()
     return user
 
 
