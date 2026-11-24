@@ -71,7 +71,7 @@ def user_create(
     if db.scalar(select(User.id).where(func.lower(User.email) == email)):
         flash(request, "Ya existe un usuario con ese correo.", "error")
         return RedirectResponse("/usuarios", status_code=303)
-    new = User(full_name=full_name.strip(), email=email, password_hash="", role=role)
+    new = User(full_name=full_name.strip(), email=email, role=role)  # la contraseña la asigna el helper
     if err := _issue_temp_password(new, password, send_email, "bienvenida", background):
         flash(request, err, "error")
         return RedirectResponse("/usuarios", status_code=303)
