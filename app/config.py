@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     attach_received_documents: bool = True
     attach_max_total_mb: int = 18
 
+    # Validez de la contraseña temporal enviada a un usuario nuevo o restablecida
+    temp_password_hours: int = 72
+
     upload_max_mb: int = 10
     upload_token_days: int = 7
     session_idle_minutes: int = 30

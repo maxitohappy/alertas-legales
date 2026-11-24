@@ -155,3 +155,108 @@ def test_un_abogado_no_puede_restablecer_contrasenas(client, db):
         f"/usuarios/{other.id}/restablecer-contrasena", data={"temp_password": TEMP, "csrf_token": csrf_from(r.text)}
     )
     assert r.status_code == 403
+
+
+# ---------- Contraseña temporal enviada por correo ----------
+
+
+def test_alta_genera_contrasena_y_la_envia_cifrada_por_la_cola(logged_in, db, fake_mailer, monkeypatch):
+    from datetime import date
+
+    import app.routers.users as users_router
+    from app.notifier import run_queue
+
+    calls = []
+    monkeypatch.setattr(users_router, "trigger_queue_send", lambda: calls.append("x") or True)
+    r = logged_in.get("/usuarios")
+    r = logged_in.post(
+        "/usuarios",
+        data={
+            "full_name": "Julián",
+            "email": "julian@example.com",
+            "send_email": "true",
+            "role": "abogado",
+            "csrf_token": csrf_from(r.text),
+        },
+    )
+    assert "se enviará a julian@example.com" in r.text and calls == ["x"]
+    assert "Correo en cola" in logged_in.get("/usuarios").text
+    db.expire_all()
+    u = db.scalar(select(User).where(User.email == "julian@example.com"))
+    assert u.must_change_password and u.temp_password_expires_at is not None
+    assert u.pending_credentials_enc and "julian" not in u.pending_credentials_enc  # guardada cifrada
+
+    summary = run_queue(db, date.today(), fake_mailer)
+    assert summary.credentials_sent == 1
+    mail = fake_mailer.sent[0]
+    assert mail.to == "julian@example.com" and "Su acceso a" in mail.subject
+    password = mail.text.split("Contraseña temporal:")[1].split()[0]
+    assert verify_password(u.password_hash, password)  # la del correo es la que funciona
+    assert "Google Authenticator" in mail.text
+    db.expire_all()
+    assert db.get(User, u.id).pending_credentials_enc is None  # se borra tras enviarla
+    run_queue(db, date.today(), fake_mailer)
+    assert len(fake_mailer.sent) == 1  # no se reenvía
+
+
+def test_alta_sin_correo_ni_contrasena_es_rechazada(logged_in, db):
+    r = logged_in.get("/usuarios")
+    r = logged_in.post(
+        "/usuarios",
+        data={"full_name": "Julián", "email": "julian@example.com", "role": "abogado", "csrf_token": csrf_from(r.text)},
+    )
+    assert "marque" in r.text
+    assert db.scalar(select(User).where(User.email == "julian@example.com")) is None
+
+
+def test_restablecer_por_correo_envia_nueva_temporal(logged_in, db, fake_mailer, monkeypatch):
+    from datetime import date
+
+    import app.routers.users as users_router
+    from app.notifier import run_queue
+
+    monkeypatch.setattr(users_router, "trigger_queue_send", lambda: True)
+    u = make_user(db, password=PASSWORD, must_change=False)
+    r = logged_in.get("/usuarios")
+    logged_in.post(
+        f"/usuarios/{u.id}/restablecer-contrasena", data={"send_email": "true", "csrf_token": csrf_from(r.text)}
+    )
+    run_queue(db, date.today(), fake_mailer)
+    mail = fake_mailer.sent[0]
+    assert "Nueva contraseña temporal" in mail.subject and "Google Authenticator" not in mail.text
+    db.expire_all()
+    password = mail.text.split("Contraseña temporal:")[1].split()[0]
+    assert verify_password(db.get(User, u.id).password_hash, password)
+
+
+def test_contrasena_temporal_caducada_no_permite_entrar(client, db):
+    from datetime import timedelta
+
+    from app.models import utcnow
+
+    u = make_user(db)
+    u.temp_password_expires_at = utcnow() - timedelta(hours=1)
+    db.commit()
+    r = client.get("/login")
+    r = client.post("/login", data={"email": u.email, "password": TEMP, "csrf_token": csrf_from(r.text)})
+    assert r.status_code == 400 and "caducado" in r.text
+
+
+def test_contrasena_temporal_generada_cumple_la_politica():
+    from app.security import generate_temp_password, password_policy_error
+
+    for _ in range(50):
+        assert password_policy_error(generate_temp_password()) is None
+
+
+def test_registros_de_actions_no_muestran_la_contrasena(db, capsys, monkeypatch):
+    from app.jobs import daily_check
+    from app.security import encrypt_str as enc
+
+    u = make_user(db)
+    u.pending_credentials_enc, u.pending_credentials_kind = enc("SecretoVisible99"), "bienvenida"
+    db.commit()
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    assert daily_check.main(["--solo-cola", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "SecretoVisible99" not in out and "julian@example.com" not in out

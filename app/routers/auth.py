@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import audit, current_user
-from app.models import User
+from app.models import User, as_aware, utcnow
 from app.security import (
     client_ip,
     decrypt_str,
@@ -72,6 +72,15 @@ def login(
             db.commit()
         audit(db, request, user.id, "login_fallido")
         return templates.TemplateResponse(request, "login.html", {"error": GENERIC_ERROR}, status_code=400)
+    expires = as_aware(user.temp_password_expires_at)
+    if user.must_change_password and expires is not None and expires < utcnow():
+        audit(db, request, user.id, "login_clave_temporal_caducada")
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Su contraseña temporal ha caducado. Pida al administrador que le envíe una nueva."},
+            status_code=400,
+        )
     if is_locked(user):
         audit(db, request, user.id, "login_bloqueado")
         return templates.TemplateResponse(
@@ -217,6 +226,7 @@ def password_change(
 
     user.password_hash = hash_password(new_password)
     user.must_change_password = False
+    user.temp_password_expires_at = None
     user.session_version += 1  # cierra cualquier otra sesión abierta con la contraseña anterior
     db.commit()
     _start_session(request, user)

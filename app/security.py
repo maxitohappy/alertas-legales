@@ -38,6 +38,16 @@ def verify_password(password_hash: str | None, password: str) -> bool:
         return False
 
 
+def generate_temp_password(length: int = 16) -> str:
+    """Contraseña temporal aleatoria que cumple la política (sin caracteres que se confundan)."""
+    lower, upper, digits = "abcdefghjkmnpqrstuvwxyz", "ABCDEFGHJKLMNPQRSTUVWXYZ", "23456789"
+    alphabet = lower + upper + digits
+    while True:
+        pwd = "".join(secrets.choice(alphabet) for _ in range(length))
+        if any(c in lower for c in pwd) and any(c in upper for c in pwd) and any(c in digits for c in pwd):
+            return pwd
+
+
 def password_policy_error(password: str) -> str | None:
     if len(password) < MIN_PASSWORD_LENGTH:
         return f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres."

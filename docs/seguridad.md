@@ -96,5 +96,11 @@ puede descargarlos y cada descarga queda auditada. Recomendación adicional: ana
   18 MB por correo). Es más cómodo, pero quedan copias en el buzón de Gmail: proteja esas cuentas con
   2FA, no reenvíe esos correos fuera del despacho y, si se prefiere máxima confidencialidad, desactive
   los adjuntos con `ATTACH_RECEIVED_DOCUMENTS=false` (el aviso llegará con el enlace al panel).
-- El primer inicio de sesión de un usuario nuevo configura el 2FA y obliga a cambiar la contraseña
-  inicial: entregar esa contraseña temporal por un canal distinto al correo.
+- **Decisión del despacho: la contraseña temporal se envía por correo** (práctica habitual). Mitigaciones:
+  la genera el sistema (aleatoria, 16 caracteres), se guarda cifrada solo hasta enviarla y luego se borra,
+  caduca a las 72 h (`TEMP_PASSWORD_HOURS`), obliga a crear una contraseña personal al entrar, y nunca
+  aparece en los registros. Riesgo residual: en un usuario **nuevo**, quien lea primero ese correo podría
+  configurar el 2FA en su propio móvil. Por eso conviene confirmar con el usuario que ha entrado (la
+  columna 2FA pasa a "Sí") y, si no fue él, desactivar la cuenta y reiniciar el 2FA. En un
+  restablecimiento el 2FA ya está configurado, así que el correo por sí solo no basta para entrar. Quien
+  prefiera no enviarla puede desmarcar la casilla y comunicarla por otro canal.

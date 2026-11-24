@@ -21,6 +21,8 @@ plazos al despacho y pide/recuerda documentos a los clientes. Idioma del proyect
 - Idempotencia por tabla `notifications`; avisos atrasados se recuperan al día siguiente.
 - Contraseñas: el admin asigna una inicial/temporal (`must_change_password`) que el usuario debe cambiar en
   `/cambiar-contrasena`; cambiar/restablecer/reiniciar 2FA incrementa `session_version` y cierra otras sesiones.
+- Contraseña temporal: la genera el sistema y se envía por correo vía la cola (`pending_credentials_enc`,
+  cifrada, se borra al enviarse); caduca a las 72 h (`temp_password_expires_at`).
 - 2FA TOTP obligatorio, Argon2id, CSRF, CSP, rate limiting, auditoría. Ver `docs/seguridad.md`.
 - Los documentos recibidos se **adjuntan** al aviso del despacho (máx. 18 MB; `ATTACH_RECEIVED_DOCUMENTS`).
 - Secretos solo en `.env` / `.env.produccion` (ignorados por git), GitHub Secrets y Render. Nunca pedir

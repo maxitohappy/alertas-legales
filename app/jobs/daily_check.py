@@ -42,11 +42,13 @@ def main(argv: list[str] | None = None) -> int:
         summary = runner(db, today, mailer, persist=not args.dry_run)
 
     logging.info(
-        "Resúmenes enviados: %s | Acciones notificadas: %s | Solicitudes a clientes: %s | Avisos de recepción: %s",
+        "Resúmenes enviados: %s | Acciones notificadas: %s | Solicitudes a clientes: %s | "
+        "Avisos de recepción: %s | Credenciales: %s",
         summary.digests_sent,
         summary.items_notified,
         summary.document_requests_sent,
         summary.received_notices_sent,
+        summary.credentials_sent,
     )
     for err in summary.errors:
         logging.error(err)

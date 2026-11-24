@@ -45,6 +45,13 @@ class User(Base):
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Se incrementa al cambiar o restablecer la contraseña: invalida las demás sesiones abiertas.
     session_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Caducidad de la contraseña temporal (None = la contraseña no es temporal).
+    temp_password_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Contraseña temporal CIFRADA pendiente de enviar por correo; se borra en cuanto se envía.
+    pending_credentials_enc: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    pending_credentials_kind: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # bienvenida|restablecimiento
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     @property

@@ -2,7 +2,7 @@
 {% block title %}Usuarios{% endblock %}
 {% block content %}
 <h1>Usuarios del despacho</h1>
-<p class="muted">Las contraseñas solo las conoce cada usuario: la inicial o la temporal que usted asigna debe cambiarse obligatoriamente al iniciar sesión.</p>
+<p class="muted">Las contraseñas definitivas solo las conoce cada usuario. La temporal (válida {{ temp_hours }} h) la genera el sistema y se envía al correo del usuario, que debe cambiarla al iniciar sesión.</p>
 <table>
   <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>2FA</th><th>Contraseña</th><th>Activo</th><th></th></tr></thead>
   <tbody>
@@ -10,7 +10,7 @@
     <tr>
       <td>{{ u.full_name }}</td><td>{{ u.email }}</td><td>{{ u.role }}</td>
       <td>{{ 'Sí' if u.totp_enabled else 'Pendiente' }}</td>
-      <td>{% if u.must_change_password %}<span class="warn">Pendiente de cambio</span>{% else %}Definitiva{% endif %}</td>
+      <td>{% if u.must_change_password %}<span class="warn">Pendiente de cambio</span>{% if u.pending_credentials_enc %}<br><small class="muted">Correo en cola</small>{% endif %}{% else %}Definitiva{% endif %}</td>
       <td>{{ 'Sí' if u.is_active else 'No' }}</td>
       <td class="actions">
         {% if u.id != user.id %}
@@ -24,8 +24,9 @@
           <summary>Restablecer contraseña</summary>
           <form method="post" action="/usuarios/{{ u.id }}/restablecer-contrasena">
             <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-            <label>Contraseña temporal <input type="password" name="temp_password" required minlength="12" autocomplete="new-password" id="temp-{{ u.id }}"></label>
-            <button>Asignar temporal</button>
+            <label class="check"><input type="checkbox" name="send_email" value="true" checked id="send-{{ u.id }}"> Generar y enviar por correo a {{ u.email }}</label>
+            <label>O escribir una temporal (opcional) <input type="password" name="temp_password" minlength="12" autocomplete="new-password" id="temp-{{ u.id }}"></label>
+            <button>Restablecer</button>
           </form>
         </details>
         {% else %}
@@ -42,7 +43,8 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <label>Nombre <input name="full_name" required maxlength="200"></label>
     <label>Correo <input type="email" name="email" required maxlength="254"></label>
-    <label>Contraseña inicial temporal (mín. 12, mayúsculas, minúsculas y números) <input type="password" name="password" required minlength="12" autocomplete="new-password"></label>
+    <label class="check"><input type="checkbox" name="send_email" value="true" checked id="new-send"> Generar la contraseña temporal y enviarla al correo del usuario</label>
+    <label>O escribir una temporal (opcional; mín. 12, mayúsculas, minúsculas y números) <input type="password" name="password" minlength="12" autocomplete="new-password" id="new-password"></label>
     <label>Rol <select name="role"><option value="abogado">Abogado</option><option value="admin">Administrador</option></select></label>
     <button>Crear</button>
   </form>

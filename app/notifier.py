@@ -11,8 +11,8 @@ from app import alerts
 from app.business_days import SpainCalendar
 from app.config import get_settings
 from app.mailer import Mail, MailError, mask_email
-from app.models import Case, Deadline, DocumentRequest, Notification, utcnow
-from app.security import new_upload_token
+from app.models import Case, Deadline, DocumentRequest, Notification, User, utcnow
+from app.security import decrypt_str, new_upload_token
 from app.web import local_date, render_email
 
 log = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ class Summary:
     items_notified: int = 0
     document_requests_sent: int = 0
     received_notices_sent: int = 0
+    credentials_sent: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -279,8 +280,35 @@ def process_queue(db: Session, today: date, mailer, summary: Summary, persist: b
             db.commit()
 
 
+def send_pending_credentials(db: Session, mailer, summary: Summary, persist: bool) -> None:
+    """Envía las contraseñas temporales en cola y borra su copia cifrada al terminar."""
+    s = get_settings()
+    users = db.scalars(select(User).where(User.pending_credentials_enc.is_not(None), User.is_active.is_(True))).all()
+    for u in users:
+        kind = u.pending_credentials_kind or "bienvenida"
+        text, html = render_email(
+            "credentials",
+            user=u,
+            password=decrypt_str(u.pending_credentials_enc),
+            kind=kind,
+            expires=u.temp_password_expires_at,
+            needs_2fa=not u.totp_enabled,
+        )
+        subject = f"Su acceso a {s.firm_name}" if kind == "bienvenida" else f"Nueva contraseña temporal — {s.firm_name}"
+        try:
+            mailer.send(Mail(u.email, subject, text, html))
+        except MailError as exc:
+            summary.errors.append(f"Credenciales del usuario {u.id}: {exc}")
+            continue
+        summary.credentials_sent += 1
+        if persist:
+            u.pending_credentials_enc = u.pending_credentials_kind = None
+            db.commit()
+
+
 def run_queue(db: Session, today: date, mailer, persist: bool = True) -> Summary:
     summary = Summary()
+    send_pending_credentials(db, mailer, summary, persist)
     process_queue(db, today, mailer, summary, persist)
     if not persist:
         db.rollback()
@@ -290,6 +318,7 @@ def run_queue(db: Session, today: date, mailer, persist: bool = True) -> Summary
 def run_daily_check(db: Session, today: date, mailer, persist: bool = True) -> Summary:
     cal = calendar()
     summary = Summary()
+    send_pending_credentials(db, mailer, summary, persist)
     process_queue(db, today, mailer, summary, persist)
     send_firm_digests(db, today, mailer, cal, summary, persist)
     send_client_requests(db, today, mailer, cal, summary, persist)
